@@ -1,0 +1,37 @@
+[project]
+name = "service-connectors"
+dynamic = ["version"]
+description = ""
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+]
+
+[project.optional-dependencies]
+trino = [
+    "trino>=0.333.0",
+]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "dacite>=1.9.2",
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.3",
+    "python-dotenv>=1.0.1",
+]
+
+[tool.hatch]
+# Moved to => hatch.toml
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+norecursedirs = "tests/utils"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+# Moved to => ruff.toml

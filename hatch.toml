@@ -1,0 +1,11 @@
+[envs.default]
+installer = "uv"
+
+[version]
+source = "vcs"
+
+[build.targets.wheel]
+packages = ["src/analytics"]
+
+[build.hooks.vcs]
+version-file = "src/analytics/connectors/_version.py"
