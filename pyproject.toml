@@ -19,10 +19,14 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "dacite>=1.9.2",
+    "pre-commit>=4.1.0",
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.3",
     "python-dotenv>=1.0.1",
 ]
+
+[tool.basedpyright]
+venv = ".venv"  # needed for pre-commit hook
 
 [tool.hatch]
 # Moved to => hatch.toml
