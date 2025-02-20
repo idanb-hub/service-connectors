@@ -15,3 +15,11 @@ lint:
   extends: .venv
   script:
     - pre-commit run --all-files
+
+build:
+  extends: .venv
+  script:
+    - uv build
+  artifacts:
+    paths:
+      - build/*
