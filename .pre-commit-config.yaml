@@ -13,6 +13,12 @@ repos:
   rev: v2.4.1
   hooks:
   - id: codespell
+- repo: https://github.com/executablebooks/mdformat
+  rev: 0.7.22
+  hooks:
+    - id: mdformat
+      args:
+      - --check
 - repo: https://github.com/DetachHead/basedpyright-pre-commit-mirror
   rev: 1.27.1
   hooks:
