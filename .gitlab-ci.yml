@@ -3,13 +3,15 @@ include:
     ref: 'master'
     file: 'ci-templates/base.gitlab-ci.yml'
 
-image: python:3.12
-before_script:
-- pip install uv
-- uv sync --frozen --all-extras
-- source .venv/bin/activate
+.venv:
+  image: python:3.12
+  before_script:
+    - pip install uv
+    - uv sync --frozen --all-extras
+    - source .venv/bin/activate
 
 lint:
   stage: test
+  extends: .venv
   script:
     - pre-commit run --all-files
