@@ -1,0 +1,16 @@
+include:
+  - project: 'csirt-mu-analytics/analytics-artifacts'
+    ref: 'master'
+    file: 'ci-templates/base.gitlab-ci.yml'
+
+default:
+  image: python:3.12
+  before_script:
+    - pip install uv
+    - uv sync --frozen --all-extras
+    - source .venv/bin/activate
+
+lint:
+  stage: test
+  script:
+    - pre-commit run --all-files
