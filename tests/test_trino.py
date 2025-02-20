@@ -46,20 +46,32 @@ async def test_cancel(connector: TrinoConnector, table: str):
     assert results.query.cancelled
 
 
-async def test_schema(connector: TrinoConnector, table: str):
-    query = f"SELECT * FROM {table} LIMIT 10000"
+async def test_schema(connector: TrinoConnector):
+    async with connector.execute("SELECT 1, 2, 3") as results:
+        await results.collect(list)
 
-    async with connector.execute(query) as results:
-        _ = await anext(aiter(results))
-        assert results.schema
+    schema = await results.schema()
+    assert len(schema) == 3
 
 
-async def test_schema_raises(connector: TrinoConnector, table: str):
-    query = f"SELECT * FROM {table} LIMIT 10000"
+async def test_schema_raises(connector: TrinoConnector):
+    async with connector.execute("SELECT 1, 2, 3") as results:
+        pass
 
-    async with connector.execute(query) as results:
-        with pytest.raises(AttributeError):
-            _ = results.schema
+    with pytest.raises(ValueError, match="query was closed"):
+        await results.schema()
+
+
+async def test_schema_waits(connector: TrinoConnector, table: str):
+    query = f"SELECT * FROM {table} LIMIT ?"
+    limit = 100
+
+    async with connector.execute(query, limit) as results:
+        schema = await results.schema()
+        rows = await results.collect(list)
+
+    assert len(rows) == limit
+    assert len(schema) == len(rows[0])
 
 
 @pytest.fixture

@@ -50,5 +50,6 @@ max-doc-length = 80  # unlimited by default
     "ANN201",  # Missing return type annotations
     "D1",      # Missing docstrings
     "INP001",  # Implicit namespace package (missing `__init__.py`)
+    "PLR2004", # "Magic" constants in comparisons
     "S608",    # SQL injection
 ]

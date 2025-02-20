@@ -14,14 +14,13 @@ class _TrinoQueryPatched(trino.client.TrinoQuery):
         # `TrinoQuery.execute()` blocks until results are ready by repeatedly
         # calling `.fetch()` until it returns non-empty.
         # To make `.execute()` non-blocking, we patch `.fetch()` to return
-        # a dummy row when it would have returned empty, so that `.execute()`
-        # thinks the results are starting to come in.
+        # a dummy row the first time it is called, so that `.execute()`
+        # thinks the results are starting to come in and doesn't block.
         # See the upstream code for context:
         #   https://github.com/trinodb/trino-python-client/blob/0.333.0/trino/client.py#L898
 
-        fetch = self.fetch
         dummy = []
-        self.fetch = lambda *args, **kwargs: fetch(*args, **kwargs) or [dummy]
+        self.fetch = lambda *_args, **_kwargs: [dummy]
 
         result = super().execute(*args, **kwargs)
 

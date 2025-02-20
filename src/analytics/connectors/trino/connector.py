@@ -71,6 +71,8 @@ class QueryResults:
     cursor: trino.dbapi.Cursor
     query: trino.client.TrinoQuery
 
+    _pages: list[list[list[object]]]
+
     def __init__(self, cursor: trino.dbapi.Cursor) -> None:
         query = cursor._query  # noqa: SLF001
         if query is None:
@@ -78,21 +80,31 @@ class QueryResults:
             raise ValueError(errmsg)
         self.query = query
         self.cursor = cursor
+        self._pages = []
 
-    @property
-    def schema(self) -> list[trino.dbapi.ColumnDescription]:
-        """Schema of the query results.
+    async def schema(self) -> list[trino.dbapi.ColumnDescription]:
+        """Get the schema of the query results.
 
-        Only available once the first row of results has been received.
+        Waits until the first row of results has been received
+        (the schema is not available before that).
 
         Raises:
-            AttributeError: The result schema is not yet available.
+            ValueError: The query was closed before the schema became available.
         """
-        # `Cursor.description` blocks if columns are not yet known.
-        if self.query._columns is None:  # noqa: SLF001
-            errmsg = "result schema is not available yet"
-            raise AttributeError(errmsg)
-        return self.cursor.description
+        while not (
+            self.query._columns is not None  # noqa: SLF001
+            or self.query.finished
+            or self.query.cancelled
+        ):
+            page = await asyncio.to_thread(self.query.fetch)
+            self._pages.append(page)
+
+        description = self.cursor.description
+        if description is not None:
+            return description
+
+        errmsg = "query was closed before its schema was received"
+        raise ValueError(errmsg)
 
     @property
     def stats(self) -> dict[object, object]:
@@ -105,10 +117,8 @@ class QueryResults:
         Each iteration fetches and returns one page of rows.
         Empty pages indicate that no results are available yet.
         """
-        # The first batch of rows is received in `Cursor.execute`.
-        assert self.query.result is not None
-        assert self.query.result.rows is not None
-        yield self.query.result.rows
+        for page in self._pages:
+            yield page
 
         while True:
             page = await asyncio.to_thread(self.query.fetch)
