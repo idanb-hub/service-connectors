@@ -17,9 +17,10 @@ lint:
     - pre-commit run --all-files
 
 build:
+  stage: build
   extends: .venv
   script:
     - uv build
   artifacts:
     paths:
-      - build/*
+      - dist/*
