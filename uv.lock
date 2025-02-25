@@ -330,7 +330,7 @@ wheels = [
 ]
 
 [[package]]
-name = "service-connectors"
+name = "service-connectors-v2"
 source = { editable = "." }
 
 [package.optional-dependencies]
