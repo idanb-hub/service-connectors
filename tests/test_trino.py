@@ -2,6 +2,7 @@ import asyncio
 import os
 
 import pytest
+import trino
 
 from analytics.connectors.trino import TrinoConfig, TrinoConnector
 from utils.fromenv import fromenv
@@ -74,16 +75,28 @@ async def test_schema_waits(connector: TrinoConnector, table: str):
     assert len(schema) == len(rows[0])
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def config() -> TrinoConfig:
     return fromenv(TrinoConfig, "TRINO_")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def connector(config: TrinoConfig) -> TrinoConnector:
-    return TrinoConnector(config)
+    return TrinoConnector(
+        config,
+        request_timeout=2,
+        max_attempts=1,
+    )
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def table() -> str:
     return os.environ["TRINO_TABLE"]
+
+
+@pytest.fixture(scope="module", autouse=True)
+def ensure_connection(connector: TrinoConnector):
+    try:
+        connector.connection.cursor().execute("SELECT 1").fetchall()
+    except trino.exceptions.Error:
+        pytest.fail("could not connect to trino server", pytrace=False)
