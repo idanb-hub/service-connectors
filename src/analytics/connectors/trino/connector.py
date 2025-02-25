@@ -30,18 +30,33 @@ if trino.dbapi.threadsafety < _DBAPI_THREADSAFE_CONNECTIONS:
 class TrinoConnector:
     connection: trino.dbapi.Connection
 
-    def __init__(self, config: TrinoConfig) -> None:
-        self.connection = trino.dbapi.connect(
-            host=config.host,
-            port=config.port,
-            catalog=config.catalog,
-            schema=config.schema,
-            http_scheme=config.http_scheme,
-            auth=trino.auth.BasicAuthentication(
-                username=config.auth_username,
-                password=config.auth_password,
-            ),
-        )
+    def __init__(
+        self,
+        config: TrinoConfig | None = None,
+        /,
+        **options: object,
+    ) -> None:
+        """Create a connection to a trino server.
+
+        Args:
+            config: Connection configuration.
+            options: Extra options for `trino.dbapi.connect` (overrides ones
+                from `config`).
+        """
+        if config is not None:
+            options.setdefault("host", config.host)
+            options.setdefault("port", config.port)
+            options.setdefault("catalog", config.catalog)
+            options.setdefault("schema", config.schema)
+            options.setdefault("http_scheme", config.http_scheme)
+            options.setdefault(
+                "auth",
+                trino.auth.BasicAuthentication(
+                    username=config.auth_username,
+                    password=config.auth_password,
+                ),
+            )
+        self.connection = trino.dbapi.connect(**options)
 
     @contextlib.asynccontextmanager
     async def execute(
