@@ -16,6 +16,12 @@ lint:
   script:
     - pre-commit run --all-files
 
+pytest:
+  stage: test
+  extends: .venv
+  script:
+    - pytest
+
 build:
   stage: build
   extends: .venv
