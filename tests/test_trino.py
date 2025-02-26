@@ -8,19 +8,28 @@ from analytics.connectors.trino import TrinoConfig, TrinoConnector
 from utils.fromenv import fromenv
 
 
-async def test_collect(connector: TrinoConnector):
-    async with connector.execute("SELECT ?", 42) as results:
+async def test_basic(connector: TrinoConnector):
+    rows = await connector.execute("SELECT ?", 42)
+    assert next(rows) == [42]
+    with pytest.raises(StopIteration):
+        next(rows)
+
+
+async def test_collect(connector: TrinoConnector, table: str):
+    query = f"SELECT * FROM {table} LIMIT ?"
+    limit = 100
+
+    async with connector.execute_lazy(query, limit) as results:
         rows = await results.collect(list)
 
-    assert len(rows) == 1
-    assert rows[0] == [42]
+    assert len(rows) == limit
 
 
 async def test_iter(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table} LIMIT ?"
     limit = 100
 
-    async with connector.execute(query, limit) as results:
+    async with connector.execute_lazy(query, limit) as results:
         rows = [row async for row in results]
 
     assert len(rows) == limit
@@ -30,7 +39,7 @@ async def test_pages(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table} LIMIT ?"
     limit = 100
 
-    async with connector.execute(query, limit) as results:
+    async with connector.execute_lazy(query, limit) as results:
         rowcount = 0
         async for page in results.pages():
             rowcount += len(page)
@@ -41,14 +50,14 @@ async def test_pages(connector: TrinoConnector, table: str):
 async def test_cancel(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table}"
 
-    async with connector.execute(query) as results:
+    async with connector.execute_lazy(query) as results:
         await asyncio.sleep(1)
 
     assert results.query.cancelled
 
 
 async def test_schema(connector: TrinoConnector):
-    async with connector.execute("SELECT 1, 2, 3") as results:
+    async with connector.execute_lazy("SELECT 1, 2, 3") as results:
         await results.collect(list)
 
     schema = await results.schema()
@@ -56,7 +65,7 @@ async def test_schema(connector: TrinoConnector):
 
 
 async def test_schema_raises(connector: TrinoConnector):
-    async with connector.execute("SELECT 1, 2, 3") as results:
+    async with connector.execute_lazy("SELECT 1, 2, 3") as results:
         pass
 
     with pytest.raises(ValueError, match="query was closed"):
@@ -67,7 +76,7 @@ async def test_schema_waits(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table} LIMIT ?"
     limit = 100
 
-    async with connector.execute(query, limit) as results:
+    async with connector.execute_lazy(query, limit) as results:
         schema = await results.schema()
         rows = await results.collect(list)
 

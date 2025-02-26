@@ -59,18 +59,17 @@ class TrinoConnector:
         self.connection = trino.dbapi.connect(**options)
 
     @contextlib.asynccontextmanager
-    async def execute(
+    async def execute_lazy(
         self,
         query: str,
         *params: object,
     ) -> AsyncIterator[QueryResults]:
         """Execute a query and prepare to receive its results.
 
-        The returned results are valid only within the context manager's scope.
-        When exiting the scope, the query is closed and no more result rows
-        can be fetched.
-        Similarly, if the query is still being processed by the server,
-        it is cancelled.
+        This context manager sends a query to the server and returns an
+        asynchronous iterable though which its results can be fetched.
+        Upon exit, the query is closed/cancelled and no more results can be
+        fetched.
         """
         cursor = self.connection.cursor()
         try:
@@ -78,6 +77,22 @@ class TrinoConnector:
             yield QueryResults(cursor)
         finally:
             cursor.close()
+
+    async def execute(
+        self,
+        query: str,
+        *params: object,
+    ) -> Iterator[list[object]]:
+        """Execute a query fetch its results.
+
+        Does not return until all results have been fetched.
+        Use `execute_lazy` if you need more control.
+
+        Returns:
+            Iterator over the fetched rows.
+        """
+        async with self.execute_lazy(query, *params) as results:
+            return await results.collect()
 
 
 class QueryResults:
