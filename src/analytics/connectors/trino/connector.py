@@ -142,7 +142,7 @@ class QueryResults:
             self._pages.append(page)
 
         description = self.cursor.description
-        if description is not None:
+        if description is not None:  # trino type annotations are wrong :/
             return description
 
         errmsg = "query was closed before its schema was received"
@@ -184,7 +184,7 @@ class QueryResults:
         factory: Callable[[Iterator[list[object]]], Into] | None = None,
     ) -> Into | Iterator[list[object]]:
         rows = itertools.chain.from_iterable(
-            [page async for page in self.pages()]
+            [page async for page in self.pages() if page]
         )
         return rows if factory is None else factory(rows)
 
