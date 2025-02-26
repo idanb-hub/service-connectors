@@ -33,6 +33,7 @@ build:
 
 publish:
   stage: build
+  extends: .venv
   needs:
     - build
   script:
