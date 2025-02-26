@@ -1,3 +1,5 @@
+# ruff: noqa: SLF001
+
 from __future__ import annotations
 
 import asyncio
@@ -74,7 +76,13 @@ class TrinoConnector:
         cursor = self.connection.cursor()
         try:
             _ = await asyncio.to_thread(cursor.execute, query, params)
-            yield QueryResults(cursor)
+
+            # Do the first fetch right away to fail early when the query is
+            # rejected (for example, because of syntax errors).
+            assert cursor._query is not None
+            rows = await asyncio.to_thread(cursor._query.fetch)
+
+            yield QueryResults(cursor, rows)
         finally:
             cursor.close()
 
@@ -103,14 +111,18 @@ class QueryResults:
 
     _pages: list[list[list[object]]]
 
-    def __init__(self, cursor: trino.dbapi.Cursor) -> None:
-        query = cursor._query  # noqa: SLF001
+    def __init__(
+        self,
+        cursor: trino.dbapi.Cursor,
+        rows: list[list[object]],
+    ) -> None:
+        query = cursor._query
         if query is None:
             errmsg = "cursor does not contain a query"
             raise ValueError(errmsg)
         self.query = query
         self.cursor = cursor
-        self._pages = []
+        self._pages = [rows]
 
     async def schema(self) -> list[trino.dbapi.ColumnDescription]:
         """Get the schema of the query results.
@@ -122,7 +134,7 @@ class QueryResults:
             ValueError: The query was closed before the schema became available.
         """
         while not (
-            self.query._columns is not None  # noqa: SLF001
+            self.query._columns is not None
             or self.query.finished
             or self.query.cancelled
         ):

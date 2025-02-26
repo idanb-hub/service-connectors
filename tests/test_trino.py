@@ -47,6 +47,14 @@ async def test_pages(connector: TrinoConnector, table: str):
     assert rowcount == limit
 
 
+async def test_syntax_error(connector: TrinoConnector):
+    with pytest.raises(trino.exceptions.TrinoUserError) as exc_info:
+        async with connector.execute_lazy("INVALID SYNTAX TEST"):
+            pass
+
+    assert exc_info.value.error_name == "SYNTAX_ERROR"
+
+
 async def test_cancel(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table}"
 
