@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import typing
 
 import pyintelowl
@@ -11,6 +12,9 @@ if typing.TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from .config import IntelOwlConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 class IntelOwlQuery:
@@ -107,6 +111,7 @@ class IntelOwlConnector:
                 return False
             raise
         else:
+            logger.info("Job killed. ID: %i", job_id)
             return True
 
         # TODO: Maybe also delete the job?
