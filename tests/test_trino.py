@@ -19,7 +19,7 @@ async def test_collect(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table} LIMIT ?"
     limit = 100
 
-    async with connector.execute_lazy(query, limit) as results:
+    async with connector.execute(query, limit) as results:
         rows = await results.collect(list)
 
     assert len(rows) == limit
@@ -29,7 +29,7 @@ async def test_iter(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table} LIMIT ?"
     limit = 100
 
-    async with connector.execute_lazy(query, limit) as results:
+    async with connector.execute(query, limit) as results:
         rows = [row async for row in results]
 
     assert len(rows) == limit
@@ -39,7 +39,7 @@ async def test_pages(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table} LIMIT ?"
     limit = 100
 
-    async with connector.execute_lazy(query, limit) as results:
+    async with connector.execute(query, limit) as results:
         rowcount = 0
         async for page in results.pages():
             rowcount += len(page)
@@ -49,7 +49,7 @@ async def test_pages(connector: TrinoConnector, table: str):
 
 async def test_syntax_error(connector: TrinoConnector):
     with pytest.raises(trino.exceptions.TrinoUserError) as exc_info:
-        async with connector.execute_lazy("INVALID SYNTAX TEST"):
+        async with connector.execute("INVALID SYNTAX TEST"):
             pass
 
     assert exc_info.value.error_name == "SYNTAX_ERROR"
@@ -58,14 +58,14 @@ async def test_syntax_error(connector: TrinoConnector):
 async def test_cancel(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table}"
 
-    async with connector.execute_lazy(query) as results:
+    async with connector.execute(query) as results:
         await asyncio.sleep(1)
 
     assert results.query.cancelled
 
 
 async def test_schema(connector: TrinoConnector):
-    async with connector.execute_lazy("SELECT 1, 2, 3") as results:
+    async with connector.execute("SELECT 1, 2, 3") as results:
         await results.collect(list)
 
     schema = await results.schema()
@@ -73,7 +73,7 @@ async def test_schema(connector: TrinoConnector):
 
 
 async def test_schema_raises(connector: TrinoConnector):
-    async with connector.execute_lazy("SELECT 1, 2, 3") as results:
+    async with connector.execute("SELECT 1, 2, 3") as results:
         pass
 
     with pytest.raises(ValueError, match="query was closed"):
@@ -84,7 +84,7 @@ async def test_schema_waits(connector: TrinoConnector, table: str):
     query = f"SELECT * FROM {table} LIMIT ?"
     limit = 100
 
-    async with connector.execute_lazy(query, limit) as results:
+    async with connector.execute(query, limit) as results:
         schema = await results.schema()
         rows = await results.collect(list)
 

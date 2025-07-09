@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import itertools
 import typing
 
 import trino
+
+from analytics.connectors import _common as common
 
 from ._monkeypatch import make_execute_non_blocking
 
@@ -29,81 +30,7 @@ if trino.dbapi.threadsafety < _DBAPI_THREADSAFE_CONNECTIONS:
     raise RuntimeError(msg)
 
 
-class TrinoConnector:
-    connection: trino.dbapi.Connection
-
-    def __init__(
-        self,
-        config: TrinoConfig | None = None,
-        /,
-        **options: object,
-    ) -> None:
-        """Create a connection to a trino server.
-
-        Args:
-            config: Connection configuration.
-            options: Extra options for `trino.dbapi.connect` (overrides ones
-                from `config`).
-        """
-        if config is not None:
-            options.setdefault("host", config.host)
-            options.setdefault("port", config.port)
-            options.setdefault("catalog", config.catalog)
-            options.setdefault("schema", config.schema)
-            options.setdefault("http_scheme", config.http_scheme)
-            options.setdefault(
-                "auth",
-                trino.auth.BasicAuthentication(
-                    username=config.auth_username,
-                    password=config.auth_password,
-                ),
-            )
-        self.connection = trino.dbapi.connect(**options)
-
-    @contextlib.asynccontextmanager
-    async def execute_lazy(
-        self,
-        query: str,
-        *params: object,
-    ) -> AsyncIterator[QueryResults]:
-        """Execute a query and prepare to receive its results.
-
-        This context manager sends a query to the server and returns an
-        asynchronous iterable though which its results can be fetched.
-        Upon exit, the query is closed/cancelled and no more results can be
-        fetched.
-        """
-        cursor = self.connection.cursor()
-        try:
-            _ = await asyncio.to_thread(cursor.execute, query, params)
-
-            # Do the first fetch right away to fail early when the query is
-            # rejected (for example, because of syntax errors).
-            assert cursor._query is not None
-            rows = await asyncio.to_thread(cursor._query.fetch)
-
-            yield QueryResults(cursor, rows)
-        finally:
-            cursor.close()
-
-    async def execute(
-        self,
-        query: str,
-        *params: object,
-    ) -> Iterator[list[object]]:
-        """Execute a query fetch its results.
-
-        Does not return until all results have been fetched.
-        Use `execute_lazy` if you need more control.
-
-        Returns:
-            Iterator over the fetched rows.
-        """
-        async with self.execute_lazy(query, *params) as results:
-            return await results.collect()
-
-
-class QueryResults:
+class TrinoQuery:
     """Lazily fetched query results."""
 
     cursor: trino.dbapi.Cursor
@@ -193,3 +120,61 @@ class QueryResults:
         async for page in self.pages():
             for row in page:
                 yield row
+
+
+class TrinoConnector:
+    connection: trino.dbapi.Connection
+
+    def __init__(
+        self,
+        config: TrinoConfig | None = None,
+        /,
+        **options: object,
+    ) -> None:
+        """Create a connection to a trino server.
+
+        Args:
+            config: Connection configuration.
+            options: Extra options for `trino.dbapi.connect` (overrides ones
+                from `config`).
+        """
+        if config is not None:
+            options.setdefault("host", config.host)
+            options.setdefault("port", config.port)
+            options.setdefault("catalog", config.catalog)
+            options.setdefault("schema", config.schema)
+            options.setdefault("http_scheme", config.http_scheme)
+            options.setdefault(
+                "auth",
+                trino.auth.BasicAuthentication(
+                    username=config.auth_username,
+                    password=config.auth_password,
+                ),
+            )
+        self.connection = trino.dbapi.connect(**options)
+
+    @common.queryfactory(TrinoQuery.collect)
+    async def execute(
+        self,
+        query: str,
+        *params: object,
+    ) -> AsyncIterator[TrinoQuery]:
+        """Execute a query and prepare to receive its results.
+
+        This context manager sends a query to the server and returns an
+        asynchronous iterable though which its results can be fetched.
+        Upon exit, the query is closed/cancelled and no more results can be
+        fetched.
+        """
+        cursor = self.connection.cursor()
+        try:
+            _ = await asyncio.to_thread(cursor.execute, query, params)
+
+            # Do the first fetch right away to fail early when the query is
+            # rejected (for example, because of syntax errors).
+            assert cursor._query is not None
+            rows = await asyncio.to_thread(cursor._query.fetch)
+
+            yield TrinoQuery(cursor, rows)
+        finally:
+            cursor.close()
