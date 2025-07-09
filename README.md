@@ -88,3 +88,25 @@ async with conn.execute("SELECT * FROM table LIMIT ?", 10) as results:
         ...
     # The query is closed/cancelled when exiting the `with` block.
 ```
+
+## IntelOwl
+
+Requires the `[intelowl]` extra.
+
+### Example
+
+```py
+from analytics.connectors.intelowl import IntelOwlConfig, IntelOwlConnector
+
+config = IntelOwlConfig(...)
+conn = IntelOwlConnector(config)
+
+# Option 1: Execute a query and wait for its results.
+results = await conn.observable_analysis("8.8.8.8", analyzers_requested=[...])
+
+# Option 2: Execute a query and periodically retrieve partial results.
+async with conn.observable_analysis("8.8.8.8", analyzers_requested=[...]) as q:
+    while await q.fetch():
+        print(q.state)  # some analyzers might finish sooner than others
+    results = q.state
+```
