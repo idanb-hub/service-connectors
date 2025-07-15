@@ -3,3 +3,6 @@ from .connector import (
     IntelOwlConnector as IntelOwlConnector,
     IntelOwlQuery as IntelOwlQuery,
 )
+from .constants import (
+    JobStatus as JobStatus,
+)

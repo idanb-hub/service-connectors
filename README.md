@@ -106,7 +106,7 @@ results = await conn.observable_analysis("8.8.8.8", analyzers_requested=[...])
 
 # Option 2: Execute a query and periodically retrieve partial results.
 async with conn.observable_analysis("8.8.8.8", analyzers_requested=[...]) as q:
-    while await q.fetch():
-        print(q.state)  # some analyzers might finish sooner than others
-    results = q.state
+    while await q.poll():
+        print(q.job)  # some analyzers might finish sooner than others
+    results = q.job
 ```

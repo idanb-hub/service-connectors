@@ -8,6 +8,8 @@ import pyintelowl
 
 from analytics.connectors import _common as common
 
+from .models import Job
+
 if typing.TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -20,7 +22,7 @@ logger = logging.getLogger(__name__)
 class IntelOwlQuery:
     connection: pyintelowl.IntelOwl
     job_id: int
-    _state: dict[str, typing.Any] | None
+    _job: Job | None
 
     def __init__(
         self,
@@ -29,39 +31,26 @@ class IntelOwlQuery:
     ) -> None:
         self.connection = connection
         self.job_id = job_id
-        self._state = None
+        self._job = None
 
-    @property
-    def state(self) -> dict[str, typing.Any]:
-        """Intermediate results of a pending query.
-
-        Only available after `self.fetch`.
-        """
-        if self._state is not None:
-            return self._state
-
-        errmsg = "need to fetch first"
-        raise AttributeError(errmsg, name=__name__)
-
-    async def fetch(self) -> bool:
+    async def poll(self) -> bool:
         """Fetch (possibly incomplete) query results.
 
         Returns:
             `True` if the query is still pending, `False` otherwise.
         """
-        self._state = await asyncio.to_thread(
+        data = await asyncio.to_thread(
             self.connection.get_job_by_id, self.job_id
         )
-        return not self.done()
+        self._job = Job.model_validate(data)
+        return not self._job.status.isfinal()
 
-    def done(self) -> bool:
-        """Check whether all analyzers in `self.state` are finished."""
-        return self._state is not None and all(
-            report["status"] not in {"RUNNING", "PENDING"}
-            for report in self._state["analyzer_reports"]
-        )
+    @property
+    def job(self) -> Job:
+        assert self._job is not None
+        return self._job
 
-    async def finish(self, *, sleep: float = 0) -> dict[str, typing.Any]:
+    async def finish(self, *, sleep: float = 0) -> Job:
         """Wait until all queried analyzers finish and return the results.
 
         Args:
@@ -70,9 +59,9 @@ class IntelOwlQuery:
         Returns:
             Results of the finished query.
         """
-        while await self.fetch():  # noqa: ASYNC110
+        while await self.poll():  # noqa: ASYNC110
             await asyncio.sleep(sleep)
-        return self.state
+        return self.job
 
 
 class IntelOwlConnector:
@@ -129,6 +118,10 @@ class IntelOwlConnector:
         )
         job_id = int(job["job_id"])
         try:
-            yield IntelOwlQuery(self.connection, job_id)
+            query = IntelOwlQuery(self.connection, job_id)
+            # Do the initial poll here so that users don't face errors when
+            # they try to access the associated job without polling first.
+            await query.poll()
+            yield query
         finally:
             await self._try_kill_job(job_id)
