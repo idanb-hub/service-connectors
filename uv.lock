@@ -531,6 +531,7 @@ wheels = [
 name = "service-connectors-v2"
 source = { editable = "." }
 dependencies = [
+    { name = "certifi" },
     { name = "pydantic" },
 ]
 
@@ -553,6 +554,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "certifi", specifier = ">=2025.1.31" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pyintelowl", marker = "extra == 'intelowl'", specifier = ">=5.1.0" },
     { name = "trino", marker = "extra == 'trino'", specifier = ">=0.333.0" },

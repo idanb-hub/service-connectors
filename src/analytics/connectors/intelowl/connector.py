@@ -4,6 +4,7 @@ import asyncio
 import logging
 import typing
 
+import certifi
 import pyintelowl
 
 from analytics.connectors import _common as common
@@ -86,6 +87,7 @@ class IntelOwlConnector:
                 "instance_url",
                 f"{config.http_scheme}://{config.host}:{config.port}",
             )
+            options.setdefault("certificate", certifi.where())
         self.connection = pyintelowl.IntelOwl(**options)
 
     async def _try_kill_job(self, job_id: int) -> bool:
