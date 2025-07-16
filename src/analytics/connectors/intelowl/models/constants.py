@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 
 
-class JobStatus(enum.Enum):
+class JobStatus(enum.StrEnum):
     # https://github.com/intelowlproject/IntelOwl/blob/v6.4.0/frontend/src/constants/jobConst.js#L5
     PENDING = "pending"
     RUNNING = "running"
@@ -27,4 +27,31 @@ class JobStatus(enum.Enum):
             JobStatus.REPORTED_WITHOUT_FAILS,
             JobStatus.KILLED,
             JobStatus.FAILED,
+        }
+
+
+class PluginType(enum.StrEnum):
+    # https://github.com/intelowlproject/IntelOwl/blob/v6.4.0/frontend/src/constants/pluginConst.js#L9
+    ANALYZER = "analyzer"
+    CONNECTOR = "connector"
+    VISUALIZER = "visualizer"
+    INGESTOR = "ingestor"
+    PIVOT = "pivot"
+    PLAYBOOK = "playbook"
+
+
+class PluginStatus(enum.StrEnum):
+    # https://github.com/intelowlproject/IntelOwl/blob/v6.4.0/frontend/src/constants/pluginConst.js#L18
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    KILLED = "KILLED"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+
+    def isfinal(self) -> bool:
+        # https://github.com/intelowlproject/IntelOwl/blob/v6.4.0/frontend/src/constants/pluginConst.js#L26
+        return self in {
+            PluginStatus.KILLED,
+            PluginStatus.SUCCESS,
+            PluginStatus.FAILED,
         }

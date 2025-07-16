@@ -1,0 +1,10 @@
+extend = "../../../../../ruff.toml"
+
+[lint]
+ignore = [
+    "N999",    # Non-snake_case module names
+    # Move import intro type-checking block (validation needs types at runtime).
+    "TC001",
+    "TC002",
+    "TC003",
+]
