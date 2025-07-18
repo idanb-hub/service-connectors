@@ -8,8 +8,10 @@ All connectors take an instance of the respective configuration dataclass as
 their first, positional-only argument.
 
 Since most connectors wrap third-party API clients, they also take arbitrary
-args and kwargs and forward them to their underlying implementation.
+keyword arguments and forward them to their underlying implementation.
 These always override options from the configuration dataclass.
+If you specify all necessary options this way, you can omit the config
+entirely.
 
 Lets use a connector for ordering pizzas as an example.
 
