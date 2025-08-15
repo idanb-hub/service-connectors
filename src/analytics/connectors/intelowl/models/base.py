@@ -52,8 +52,45 @@ class DictModel(  # pyright: ignore[reportUnsafeMultipleInheritance]
 
 
 class PluginModel(DictModel, frozen=True):
+    """Base class for models of IntelOwl plugins.
+
+    Subclasses are required to define two literal fields: `name` and `type`.
+    In every subclass, literal values from type annotations on literal fields
+    are made accessible as class variables (named same as the fields).
+    """
+
+    REQUIRED_LITERAL_FIELDS: typing.ClassVar[tuple[str, ...]] = ("name", "type")
+
     name: str
     type: PluginType
+
+    @classmethod
+    @typing.override
+    def __pydantic_init_subclass__(cls, **kwargs: typing.Any) -> None:
+        super().__pydantic_init_subclass__(**kwargs)
+
+        # Ensure subclass defines the required literal fields.
+        # NOTE: Pyright enforces that the literal values have compatible types.
+        for name in PluginModel.REQUIRED_LITERAL_FIELDS:
+            cls_field_type = cls.model_fields[name].annotation
+            if typing.get_origin(cls_field_type) is not typing.Literal:
+                expected_type = PluginModel.model_fields[name].annotation
+                errmsg = (
+                    f"invalid type annotation on field '{name}', "
+                    f"expected {expected_type.__qualname__} literal"
+                )
+                raise TypeError(errmsg)
+
+        # Make values of literal fields accessible as class variables.
+        for name, field in cls.model_fields.items():
+            if typing.get_origin(field.annotation) is not typing.Literal:
+                continue
+
+            values = typing.get_args(field.annotation)
+            if not values:
+                continue
+
+            setattr(cls, name, values[0])
 
 
 class PluginList(list[dict[str, typing.Any]]):
@@ -85,10 +122,8 @@ class PluginList(list[dict[str, typing.Any]]):
         return self._get_model(model=name_or_model)
 
     def _get_model[T: PluginModel](self, model: type[T]) -> T | None:
-        names = _get_literal_values(model.model_fields["name"].annotation)
-        types = _get_literal_values(model.model_fields["type"].annotation)
         for plugin in self:
-            if plugin["name"] in names and plugin["type"] in types:
+            if plugin["name"] == model.name and plugin["type"] == model.type:
                 return model.model_validate(plugin)
         return None
 
@@ -97,13 +132,3 @@ class PluginList(list[dict[str, typing.Any]]):
             if plugin.get("name") == name:
                 return plugin
         return None
-
-
-def _get_literal_values(annotation: type | None) -> tuple[str, ...]:
-    # Doesn't work with unions or type aliases, but we don't need that.
-
-    if typing.get_origin(annotation) is not typing.Literal:
-        errmsg = f"{annotation} is not {typing.Literal}"
-        raise TypeError(errmsg)
-
-    return typing.get_args(annotation)
