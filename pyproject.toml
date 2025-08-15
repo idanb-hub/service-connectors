@@ -33,6 +33,9 @@ dev = [
 [tool.basedpyright]
 venv = ".venv"  # needed for pre-commit hook
 
+[tool.codespell]
+ignore-words = ".codespell-whitelist.txt"
+
 [tool.hatch]
 # Moved to => hatch.toml
 
