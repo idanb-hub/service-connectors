@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-import datetime
 import typing
 
-from . import PluginModel, PluginStatus, PluginType
+from ..base import PluginModel, PluginType
 
 
 class TorProject(PluginModel, frozen=True):
     name: typing.Literal["TorProject"]
-    process_time: float
-    status: PluginStatus
-    end_time: datetime.datetime
-    parameters: dict[str, typing.Any]
     type: typing.Literal[PluginType.ANALYZER]
-    id: int
-    report: dict[str, typing.Any]
-    errors: list[typing.Any]
-    start_time: datetime.datetime
+    report: Report
+
+
+class Report(typing.TypedDict):
+    # https://github.com/intelowlproject/IntelOwl/blob/v6.4.0/api_app/analyzers_manager/observable_analyzers/tor.py#L25
+    found: bool

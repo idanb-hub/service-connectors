@@ -7,7 +7,11 @@ import typing
 import pydantic
 from pydantic_core import core_schema
 
-from .constants import PluginType
+from .constants import (
+    # Re-exported for convenience.
+    PluginStatus as PluginStatus,  # noqa: PLC0414
+    PluginType as PluginType,  # noqa: PLC0414
+)
 
 
 # Pydantic supports ABCs, not sure why Pyright complains.
@@ -63,6 +67,9 @@ class PluginModel(DictModel, frozen=True):
 
     name: str
     type: PluginType
+
+    status: PluginStatus
+    errors: list[str] = []  # not sure if default is necessary
 
     @classmethod
     @typing.override

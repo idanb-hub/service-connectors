@@ -10,4 +10,6 @@ from .constants import JobStatus
 
 class Job(DictModel, frozen=True):
     status: JobStatus
+    errors: list[str] = []
+    warnings: list[str] = []
     analyzer_reports: PluginList = PluginList()
