@@ -108,6 +108,7 @@ class IntelOwlConnector:
         # TODO: Maybe also delete the job?
 
     @common.queryfactory(IntelOwlQuery.finish)
+    @common.copy_argtypes(pyintelowl.IntelOwl.send_observable_analysis_request)
     async def observable_analysis(
         self,
         *args: typing.Any,
