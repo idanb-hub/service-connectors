@@ -102,11 +102,44 @@ config = IntelOwlConfig(...)
 conn = IntelOwlConnector(config)
 
 # Option 1: Execute a query and wait for its results.
-results = await conn.observable_analysis("8.8.8.8", analyzers_requested=[...])
+job = await conn.observable_analysis("8.8.8.8", analyzers_requested=[...])
 
 # Option 2: Execute a query and periodically retrieve partial results.
 async with conn.observable_analysis("8.8.8.8", analyzers_requested=[...]) as q:
     while await q.poll():
         print(q.job)  # some analyzers might finish sooner than others
     results = q.job
+
+for report in job.analyzer_reports:
+    print(report["name"])
+
+# Helper method to get report by name (returns `None` if missing).
+report = job.analyzer_reports.get("Classic_DNS")
+```
+
+### Validation
+
+By default, only a minimal subset of returned data is validated.
+The `.analyzer_reports.get` method is overloaded to optionally validate further.
+If, instead of an analyzer name, you pass a subclass of
+[`PluginModel`](./src/analytics/connectors/intelowl/models/base.py),
+it will validate against this model.
+Models use the `pydantic` library, see [their docs](https://docs.pydantic.dev/)
+or [our plugin models](./src/analytics/connectors/intelowl/models/plugins/)
+for more information.
+
+```py
+from analytics.connectors.intelowl.models import plugins
+
+import pydantic
+
+job = await conn.observable_analysis(
+    "8.8.8.8", analyzers_requested=[plugins.Classic_DNS.name]
+)
+
+try:
+    # Instead of analyzer name, pass model to validate against.
+    report = job.analyzer_reports.get(plugins.Classic_DNS)
+except pydantic.ValidationError:
+    ...
 ```
