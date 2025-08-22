@@ -114,6 +114,29 @@ class IntelOwlConnector:
         *args: typing.Any,
         **kwargs: typing.Any,
     ) -> AsyncIterator[IntelOwlQuery]:
+        """Execute an observable analysis job and retrieve its results.
+
+        Can be awaited directly or used as an async context manager.
+
+        If awaited directly, returns the finished job's results.
+
+        ```py
+        job = await connector.observable_analysis("1.1.1.1", ...)
+        print(job.analyzer_reports)
+        ```
+
+        If used as an async context manager, the managed object is used to
+        manually fetch job's results and monitor its progress.
+        When exiting the managed context, the job is killed and no more results
+        can be fetched.
+
+        ```py
+        async with connector.observable_analysis("1.1.1.1", ...) as query:
+            while await query.poll():
+                assert not query.job.status.isfinal()
+            job = query.job
+        ```
+        """
         job: dict[str, typing.Any] = await asyncio.to_thread(
             self.connection.send_observable_analysis_request,
             *args,

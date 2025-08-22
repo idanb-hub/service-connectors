@@ -159,12 +159,30 @@ class TrinoConnector:
         query: str,
         *params: object,
     ) -> AsyncIterator[TrinoQuery]:
-        """Execute a query and prepare to receive its results.
+        """Execute a query and receive its results.
 
-        This context manager sends a query to the server and returns an
-        asynchronous iterable though which its results can be fetched.
-        Upon exit, the query is closed/cancelled and no more results can be
-        fetched.
+        Args:
+            query: Query string ('?' for params).
+            params: Query parameters (replace '?' in query).
+
+        Can be awaited directly or used as an async context manager.
+
+        If awaited directly, returns an iterator over result rows.
+
+        ```py
+        rows = await connector.execute("SELECT * FROM table LIMIT ?", 10)
+        ```
+
+        If used as an async context manager, the managed object is used to
+        fetch result rows and metadata.
+        When exiting the managed context, the query is closed/cancelled and no
+        more results can be fetched.
+
+        ```py
+        async with connector.execute("SELECT * FROM table") as query:
+            schema = await query.schema()
+            async for row in query: ...
+        ```
         """
         cursor = self.connection.cursor()
         try:

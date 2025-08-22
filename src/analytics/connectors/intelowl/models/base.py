@@ -113,10 +113,17 @@ class PluginList(list[dict[str, typing.Any]]):
         )
 
     @typing.overload
-    def get[T: PluginModel](self, model: type[T], /) -> T | None: ...
+    def get[T: PluginModel](self, model: type[T], /) -> T | None:
+        """Get report for plugin model and validate it against this model.
+
+        Raises:
+            pydantic.ValidationError: Report with matching name was found but
+                didn't validate.
+        """
 
     @typing.overload
-    def get(self, name: str, /) -> dict[str, typing.Any] | None: ...
+    def get(self, name: str, /) -> dict[str, typing.Any] | None:
+        """Get report by plugin name."""
 
     def get[T: PluginModel](
         self,
