@@ -33,6 +33,9 @@ ignore = [
     "E501",
 ]
 
+[lint.flake8-builtins]
+builtins-strict-checking = false
+
 [lint.isort]
 force-wrap-aliases = true
 combine-as-imports = true

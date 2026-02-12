@@ -16,6 +16,9 @@ trino = [
 intelowl = [
     "pyintelowl>=5.1.0",
 ]
+http = [
+    "aiohttp>=3.13.3",
+]
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
