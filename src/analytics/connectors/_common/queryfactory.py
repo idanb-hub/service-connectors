@@ -47,48 +47,76 @@ class AwaitableContextManager[Enter, Exit: bool | None, Result](
         return awaitable().__await__()
 
 
-@typing.final
-class queryfactory[Enter, Result]:  # noqa: N801
-    def __init__(self, collect: Callable[[Enter], Awaitable[Result]]) -> None:
-        """Decorator factory for creating query context manager factories.
+@typing.overload
+def queryfactory[Enter: Awaitable[typing.Any], Result, **Params]() -> Callable[
+    [Callable[Params, AsyncIterator[Enter]]],
+    Callable[
+        Params,
+        AwaitableContextManager[Enter, bool | None, Result],
+    ],
+]: ...
 
-        Works like `contextlib.asynccontextmanager`, except the created context
-        managers are also awaitable. Awaiting them is equivalent to awaiting
-        `collect` invoked on their managed context. Typically, `collect` will
-        be a method of the managed context class.
 
-        Example:
-        ```py
-        class Query:  # the managed context class
-            async def result(): ...
+@typing.overload
+def queryfactory[Enter, Result, **Params](
+    collect: Callable[[Enter], Awaitable[Result]],
+) -> Callable[
+    [Callable[Params, AsyncIterator[Enter]]],
+    Callable[Params, AwaitableContextManager[Enter, bool | None, Result]],
+]: ...
 
-        class Connector:
-            @queryfactory(Query.result)
-            async def query():
-                # See `contextlib.asynccontextmanager` for what to put here.
-                yield Query(...)
 
-        connector = Connector()
-        # Context manager works same as with `contextlib.asynccontextmanager`.
-        async with connector.query() as query:
-            result = await query.result()
-        # But it can also be awaited directly. Next line is equivalent to ^.
-        result = await connector.query()
-        ```
-        """  # noqa: D401
-        self._collect = collect
+def queryfactory[Enter, Result, **Params](
+    collect: Callable[[Enter], Awaitable[Result]] | None = None,
+) -> Callable[
+    [Callable[Params, AsyncIterator[Enter]]],
+    Callable[Params, AwaitableContextManager[Enter, bool | None, Result]],
+]:
+    """Decorator factory for creating query context manager factories.
 
-    def __call__[**P](
-        self,
-        func: Callable[P, AsyncIterator[Enter]],
-    ) -> Callable[P, AwaitableContextManager[Enter, bool | None, Result]]:
+    Works like `contextlib.asynccontextmanager`, except the created context
+    managers are also awaitable. Awaiting them is equivalent to awaiting
+    `collect` invoked on their managed context. Typically, `collect` will
+    be a method of the managed context class.
+
+    If the managed context is awaitable itself, `collect` can be omitted,
+    in which case awaiting the context manager is equivalent to awaiting its
+    context.
+
+    Example:
+    ```py
+    class Query:  # the managed context class
+        async def result(): ...
+
+    class Connector:
+        @queryfactory(Query.result)
+        async def query():
+            # See `contextlib.asynccontextmanager` for what to put here.
+            yield Query(...)
+
+    connector = Connector()
+    # Context manager works same as with `contextlib.asynccontextmanager`.
+    async with connector.query() as query:
+        result = await query.result()
+    # But it can also be awaited directly. Next line is equivalent to ^.
+    result = await connector.query()
+    ```
+    """  # noqa: D401
+    if collect is None:
+        collect = lambda awaitable: typing.cast("Awaitable[Result]", awaitable)  # noqa: E731
+
+    def decorator(
+        func: Callable[Params, AsyncIterator[Enter]],
+    ) -> Callable[Params, AwaitableContextManager[Enter, bool | None, Result]]:
         ctxmgr = contextlib.asynccontextmanager(func)
 
         def decorated(
-            *args: P.args,
-            **kwargs: P.kwargs,
+            *args: Params.args,
+            **kwargs: Params.kwargs,
         ) -> AwaitableContextManager[Enter, bool | None, Result]:
             ctx = ctxmgr(*args, **kwargs)
-            return AwaitableContextManager(ctx, self._collect)
+            return AwaitableContextManager(ctx, collect)
 
         return decorated
+
+    return decorator
