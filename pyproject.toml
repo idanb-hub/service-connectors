@@ -10,14 +10,19 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-trino = [
-    "trino>=0.333.0",
+all = [
+    "service-connectors-v2[http]",
+    "service-connectors-v2[intelowl]",
+    "service-connectors-v2[trino]",
+]
+http = [
+    "aiohttp>=3.13.3",
 ]
 intelowl = [
     "pyintelowl>=5.1.0",
 ]
-http = [
-    "aiohttp>=3.13.3",
+trino = [
+    "trino>=0.333.0",
 ]
 
 [build-system]

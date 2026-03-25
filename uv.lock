@@ -926,6 +926,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "aiohttp" },
+    { name = "pyintelowl" },
+    { name = "trino" },
+]
 http = [
     { name = "aiohttp" },
 ]
@@ -947,13 +952,16 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", marker = "extra == 'all'", specifier = ">=3.13.3" },
     { name = "aiohttp", marker = "extra == 'http'", specifier = ">=3.13.3" },
     { name = "certifi", specifier = ">=2025.1.31" },
     { name = "pydantic", specifier = ">=2.11.7" },
+    { name = "pyintelowl", marker = "extra == 'all'", specifier = ">=5.1.0" },
     { name = "pyintelowl", marker = "extra == 'intelowl'", specifier = ">=5.1.0" },
+    { name = "trino", marker = "extra == 'all'", specifier = ">=0.333.0" },
     { name = "trino", marker = "extra == 'trino'", specifier = ">=0.333.0" },
 ]
-provides-extras = ["http", "intelowl", "trino"]
+provides-extras = ["all", "http", "intelowl", "trino"]
 
 [package.metadata.requires-dev]
 dev = [
