@@ -12,6 +12,8 @@ from utils.fromenv import fromenv
 if typing.TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from yarl import URL
+
 
 async def test_basic(connector: HTTPConnector[dict[str, str]]):
     data = await connector.get("/test")
@@ -49,9 +51,7 @@ def config() -> HTTPConfig:
 
 
 @pytest.fixture(scope="module")
-async def connector(
-    config: HTTPConfig,
-) -> AsyncIterator[HTTPConnector[dict[str, str]]]:
+async def server_url() -> AsyncIterator[URL]:
     # https://docs.aiohttp.org/en/v3.13.3/testing.html#framework-agnostic-utilities
     app = web.Application()
 
@@ -67,14 +67,20 @@ async def connector(
 
     server = TestServer(app)
     await server.start_server()
+    yield server.make_url("")
+    await server.close()
 
+
+@pytest.fixture(scope="module")
+async def connector(
+    config: HTTPConfig,
+    server_url: URL,
+) -> AsyncIterator[HTTPConnector[dict[str, str]]]:
     connector = HTTPConnector(
         config,
         mode="json",
-        base_url=server.make_url(""),
+        base_url=server_url,
     )
 
     yield typing.cast("HTTPConnector[typing.Any]", connector)
-
     await connector.close()
-    await server.close()
