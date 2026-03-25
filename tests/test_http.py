@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import typing
-from collections.abc import AsyncIterator
 
 import pytest
 from aiohttp import web
@@ -7,6 +8,9 @@ from aiohttp.test_utils import TestServer
 
 from analytics.connectors.http import HTTPConfig, HTTPConnector
 from utils.fromenv import fromenv
+
+if typing.TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 async def test_basic(connector: HTTPConnector[dict[str, str]]):
