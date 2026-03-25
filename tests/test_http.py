@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import typing
 
 import pytest
@@ -43,6 +44,23 @@ async def test_read_while_receiving(connector: HTTPConnector[dict[str, str]]):
         async for _ in response.receive():
             with pytest.raises(RuntimeError):
                 _ = await response.text()
+
+
+async def test_concurrency_limit(config: HTTPConfig, server_url: URL):
+    connector = HTTPConnector(
+        config,
+        mode="json",
+        base_url=server_url,
+        concurrency_limit=1,
+    )
+
+    async with connector.get("/test"):
+        with pytest.raises(asyncio.TimeoutError):
+            async with asyncio.timeout(1):
+                # Blocked by the outer request.
+                _ = await connector.get("/test")
+
+    _ = await connector.get("/test")
 
 
 @pytest.fixture(scope="module")

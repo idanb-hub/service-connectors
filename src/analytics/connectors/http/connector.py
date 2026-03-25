@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import typing
 
 import aiohttp
@@ -72,6 +74,8 @@ class HTTPResponse[Payload](aiohttp.ClientResponse):
 class HTTPConnector[Payload]:
     session: aiohttp.ClientSession
 
+    _semaphore: contextlib.AbstractAsyncContextManager[None]
+
     @typing.overload
     def __init__(
         self: HTTPConnector[str],
@@ -79,6 +83,7 @@ class HTTPConnector[Payload]:
         /,
         *,
         mode: typing.Literal["text"] = ...,
+        concurrency_limit: int | None = None,
         **options: typing.Unpack[ClientSessionParams],
     ) -> None: ...
 
@@ -89,6 +94,7 @@ class HTTPConnector[Payload]:
         /,
         *,
         mode: typing.Literal["bytes"],
+        concurrency_limit: int | None = None,
         **options: typing.Unpack[ClientSessionParams],
     ) -> None: ...
 
@@ -99,6 +105,7 @@ class HTTPConnector[Payload]:
         /,
         *,
         mode: typing.Literal["json"],
+        concurrency_limit: int | None = None,
         **options: typing.Unpack[ClientSessionParams],
     ) -> None: ...
 
@@ -108,6 +115,7 @@ class HTTPConnector[Payload]:
         /,
         *,
         mode: typing.Literal["text", "bytes", "json"] = "text",
+        concurrency_limit: int | None = None,
         **options: typing.Unpack[ClientSessionParams],
     ) -> None:
         """Create an HTTP client session.
@@ -115,6 +123,7 @@ class HTTPConnector[Payload]:
         Args:
             config: Session configuration.
             mode: Default response payload format.
+            concurrency_limit: Maximum number of concurrent requests.
             options: Extra options for `aiohttp.ClientSession` (overrides ones
                 from `config`).
         """
@@ -123,6 +132,14 @@ class HTTPConnector[Payload]:
                 "timeout",
                 aiohttp.ClientTimeout(total=config.timeout),
             )
+            if concurrency_limit is None:
+                concurrency_limit = config.concurrency_limit
+
+        self._semaphore = (
+            asyncio.Semaphore(concurrency_limit)
+            if concurrency_limit
+            else contextlib.nullcontext()
+        )
 
         response_class = options.pop("response_class", aiohttp.ClientResponse)
 
@@ -180,7 +197,10 @@ class HTTPConnector[Payload]:
             print(await response.text())
         ```
         """
-        async with self.session.request(method, url, **kwargs) as response:
+        async with (
+            self._semaphore,
+            self.session.request(method, url, **kwargs) as response,
+        ):
             yield typing.cast("HTTPResponse[Payload]", response)
 
     type Response = common.AwaitableContextManager[
