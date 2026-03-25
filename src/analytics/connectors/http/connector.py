@@ -150,7 +150,7 @@ class HTTPConnector[Payload]:
     async def close(self) -> None:
         await self.session.close()
 
-    @common.queryfactory()
+    @common.queryfactory[Payload]()
     async def request(
         self,
         method: str,

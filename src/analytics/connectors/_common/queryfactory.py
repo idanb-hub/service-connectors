@@ -47,31 +47,7 @@ class AwaitableContextManager[Enter, Exit: bool | None, Result](
         return awaitable().__await__()
 
 
-@typing.overload
-def queryfactory[Enter: Awaitable[typing.Any], Result, **Params]() -> Callable[
-    [Callable[Params, AsyncIterator[Enter]]],
-    Callable[
-        Params,
-        AwaitableContextManager[Enter, bool | None, Result],
-    ],
-]: ...
-
-
-@typing.overload
-def queryfactory[Enter, Result, **Params](
-    collect: Callable[[Enter], Awaitable[Result]],
-) -> Callable[
-    [Callable[Params, AsyncIterator[Enter]]],
-    Callable[Params, AwaitableContextManager[Enter, bool | None, Result]],
-]: ...
-
-
-def queryfactory[Enter, Result, **Params](
-    collect: Callable[[Enter], Awaitable[Result]] | None = None,
-) -> Callable[
-    [Callable[Params, AsyncIterator[Enter]]],
-    Callable[Params, AwaitableContextManager[Enter, bool | None, Result]],
-]:
+class queryfactory[Result]:  # noqa: N801
     """Decorator factory for creating query context manager factories.
 
     Works like `contextlib.asynccontextmanager`, except the created context
@@ -101,22 +77,53 @@ def queryfactory[Enter, Result, **Params](
     # But it can also be awaited directly. Next line is equivalent to ^.
     result = await connector.query()
     ```
-    """  # noqa: D401
-    if collect is None:
-        collect = lambda awaitable: typing.cast("Awaitable[Result]", awaitable)  # noqa: E731
+    """
 
-    def decorator(
-        func: Callable[Params, AsyncIterator[Enter]],
-    ) -> Callable[Params, AwaitableContextManager[Enter, bool | None, Result]]:
-        ctxmgr = contextlib.asynccontextmanager(func)
+    @typing.overload
+    def __new__[Enter: Awaitable[typing.Any], **Params](
+        cls,
+    ) -> Callable[
+        [Callable[Params, AsyncIterator[Enter]]],
+        Callable[
+            Params,
+            AwaitableContextManager[Enter, bool | None, Result],
+        ],
+    ]: ...
 
-        def decorated(
-            *args: Params.args,
-            **kwargs: Params.kwargs,
-        ) -> AwaitableContextManager[Enter, bool | None, Result]:
-            ctx = ctxmgr(*args, **kwargs)
-            return AwaitableContextManager(ctx, collect)
+    @typing.overload
+    def __new__[Enter, **Params](
+        cls,
+        collect: Callable[[Enter], Awaitable[Result]],
+    ) -> Callable[
+        [Callable[Params, AsyncIterator[Enter]]],
+        Callable[Params, AwaitableContextManager[Enter, bool | None, Result]],
+    ]: ...
 
-        return decorated
+    def __new__[Enter, **Params](
+        cls,
+        collect: Callable[[Enter], Awaitable[Result]] | None = None,
+    ) -> Callable[
+        [Callable[Params, AsyncIterator[Enter]]],
+        Callable[Params, AwaitableContextManager[Enter, bool | None, Result]],
+    ]:
+        if collect is None:
+            collect = lambda result: typing.cast("Awaitable[Result]", result)  # noqa: E731
 
-    return decorator
+        def decorator(
+            func: Callable[Params, AsyncIterator[Enter]],
+        ) -> Callable[
+            Params,
+            AwaitableContextManager[Enter, bool | None, Result],
+        ]:
+            ctxmgr = contextlib.asynccontextmanager(func)
+
+            def decorated(
+                *args: Params.args,
+                **kwargs: Params.kwargs,
+            ) -> AwaitableContextManager[Enter, bool | None, Result]:
+                ctx = ctxmgr(*args, **kwargs)
+                return AwaitableContextManager(ctx, collect)
+
+            return decorated
+
+        return decorator
