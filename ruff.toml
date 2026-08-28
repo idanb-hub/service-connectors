@@ -33,17 +33,24 @@ ignore = [
     "E501",
 ]
 
+[lint.flake8-builtins]
+builtins-strict-checking = false
+
 [lint.isort]
 force-wrap-aliases = true
 combine-as-imports = true
 # Needed in tests since they run with a modified PYTHONPATH.
 known-first-party = ["analytics", "utils"]
+required-imports = [
+    "from __future__ import annotations",
+]
 
 [lint.pycodestyle]
 max-doc-length = 80  # unlimited by default
 
 [lint.per-file-ignores]
 "src/**/__init__.py" = [
+    "I002",    # Missing required imports
     "PLC0414", # Useless import aliases (used for re-exporting imports)
 ]
 "tests/**/*.py" = [

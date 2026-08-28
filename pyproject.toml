@@ -10,11 +10,19 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-trino = [
-    "trino>=0.333.0",
+all = [
+    "service-connectors-v2[http]",
+    "service-connectors-v2[intelowl]",
+    "service-connectors-v2[trino]",
+]
+http = [
+    "aiohttp>=3.13.3",
 ]
 intelowl = [
     "pyintelowl>=5.1.0",
+]
+trino = [
+    "trino>=0.333.0",
 ]
 
 [build-system]
@@ -39,11 +47,12 @@ ignore-words = ".codespell-whitelist.txt"
 [tool.hatch]
 # Moved to => hatch.toml
 
-[tool.pytest.ini_options]
+[tool.pytest]
 pythonpath = ["src"]
-norecursedirs = "tests/utils"
+norecursedirs = ["tests/utils"]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
+asyncio_default_fixture_loop_scope = "module"
+asyncio_default_test_loop_scope = "module"
 
 [tool.ruff]
 # Moved to => ruff.toml

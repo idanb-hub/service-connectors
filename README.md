@@ -63,6 +63,37 @@ serve(pizza)
 Note that without the `print` and `serve` calls, this code would be equivalent
 to the previous "[High-level API](#high-level-api-access)" example.
 
+## HTTP
+
+Requires the `[http]` extra.
+
+```py
+from analytics.connectors.http import HTTPConfig, HTTPConnector
+
+config = HTTPConfig(...)
+conn = HTTPConnector(
+    config,
+    # default response content format (bytes/text/json)
+    mode="json",
+    # additional options for `aiohttp.ClientSession`
+    raise_for_status=True,
+)
+
+# Option 1: Send a request and await its response content (in default format).
+ipinfo = await conn.post("http://ip-api.com/batch", json=["1.1.1.1", "8.8.8.8"])
+
+# Option 2: Send a request and stream its response.
+url = "https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_720p_h264.mov"
+async with conn.get(url) as response:
+    # response extends `aiohttp.ClientResponse` (see its docs)
+    print(response.content_type)
+    # track download progress (optional)
+    async for progress, chunk in response.receive():
+        print(f"{progress}/{response.content_length}")
+    # read response body
+    subprocess.run(["ffplay", "-"], input=await response.read())
+```
+
 ## Trino
 
 Requires the `[trino]` extra.
